@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <map>
 #include <unordered_set>
+#include <vector>
+#include <queue>
 
 using namespace std;
 
@@ -48,6 +50,38 @@ class DependencyGraph
                 cout << it->first << "-->" << *it2 << "\n";
             }
             cout << "\n";
+        }
+    }
+
+    void findReachable(unordered_set<int> seed, unordered_set<int> &visited)
+    {
+        cout << "Finding reachability set now\n";
+        int head = -1;
+        unordered_set<int>::iterator seedIt;
+        while (!seed.empty())
+        {
+            seedIt = seed.begin();
+            head = *seedIt;
+            seed.erase(seedIt);
+
+            // cout << head << " is reachable\n";
+            visited.insert(head);
+
+            map<int, unordered_set<int>>::iterator it;
+            unordered_set<int>::iterator it2;
+
+            it = (this->graph).find(head);
+
+            if (it != (this->graph).end())
+            {
+                for (it2 = (it->second).begin(); it2 != (it->second).end(); it2++)
+                {
+                    if (visited.find(*it2) == visited.end())
+                    {
+                        seed.insert(*it2);
+                    }
+                }
+            }
         }
     }
 };
@@ -98,11 +132,13 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         int m, n;
         double data;
         fin >> m >> n >> data;
-        dg.insertEdge(m, n);
-
+        
         // maintaining zero starting index
+        dg.insertEdge(m, n);
         m--;
         n--;
+        
+        
 
         if (n != currCol)
         {
@@ -114,10 +150,25 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         Li[l] = m;    // row of the lth nz data point
     }
 
+    cout << "Dependency Graph Built\n"; 
+
     Lp[N] = NNZ;  // only this should be required
     Li[NNZ] = -1; // JSICS
     Lx[NNZ] = -1; // JSICS
     // dg.traverseDG();
+
+    unordered_set<int> seed;
+    seed.clear();
+    seed.insert(5);
+    unordered_set<int> reachable;
+    reachable.clear();
+
+    dg.findReachable(seed, reachable);
+
+    cout << "Reachable set size: " << reachable.size() << "\n" ;
+    // unordered_set<int>::iterator it;
+    // for(it = reachable.begin(); it != reachable.end(); it++)
+    //     cout << *it << " \n";
 
     fin.close();
 
@@ -220,8 +271,8 @@ int main()
     readMatrix(n, Lp, Li, Lx);
     readRHS(n, x);
 
-    lsolve(n, Lp, Li, Lx, x);
-    print(n, x);
+    // lsolve(n, Lp, Li, Lx, x);
+    // print(n, x);
     // readMatrix();
     return 0;
 }
