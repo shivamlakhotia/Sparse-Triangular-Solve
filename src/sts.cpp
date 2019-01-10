@@ -1,27 +1,15 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-
+#include <assert.h>
 using namespace std;
-
-/*
-* Lower triangular solver Lx=b
-* L is stored in the compressed column storage format
-* Inputs are:
-* n : the matrix dimension
-* Lp : the column pointer of L
-* Li : the row index of L
-* Lx : the values of L
-* In/Out:
-* x : the right hand-side b at start and the solution x at the end.
-*/
 
 // code referred from http://www.cplusplus.com/forum/general/65804/
 int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
 {
     // Open the file:
-    std::ifstream fin("../res/af_0_k101/af_0_k101.mtx");
-    // std::ifstream fin("../res/adjnoun/adjnoun.mtx");
+    // ifstream fin("../res/af_0_k101/af_0_k101.mtx");
+    ifstream fin("../res/unit_test/L.mtx");
 
     // Declare variables:
     int M, N, NNZ;
@@ -84,6 +72,52 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
     return 0;
 }
 
+int readRHS(const int order, double* &B)
+{
+    // Open the file:
+    // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
+    ifstream fin("../res/unit_test/B.mtx");
+
+    // Declare variables:
+    int M, N;
+
+    // Ignore headers and comments:
+    while (fin.peek() == '%')
+        fin.ignore(2048, '\n');
+
+    // Read defining parameters:
+    fin >> M >> N;
+
+    assert(order == M);
+
+    B = new double[M + 2];
+
+    // Read the data and create the matrix in CSC format
+    for (int l = 0; l < M; l++)
+    {
+        // getting data
+        // double data;
+        // fin >> data;
+        fin >> B[l];
+    }
+    B[M] = -1; // JSICS
+
+    fin.close();
+
+    return 0;
+}
+
+/*
+* Lower triangular solver Lx=b
+* L is stored in the compressed column storage format
+* Inputs are:
+* n : the matrix dimension
+* Lp : the column pointer of L
+* Li : the row index of L
+* Lx : the values of L
+* In/Out:
+* x : the right hand-side b at start and the solution x at the end.
+*/
 int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
 {
     //x is initilized with b
@@ -115,11 +149,12 @@ int main()
     int *Lp;
     int *Li;
     double *Lx;
-
+    // double *B;
     cout << "Hello World!\n";
 
     readMatrix(n, Lp, Li, Lx);
-
+    readRHS(n, x);
+    lsolve(n, Lp, Li, Lx, x);
     // readMatrix();
     return 0;
 }
