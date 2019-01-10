@@ -2,17 +2,67 @@
 #include <fstream>
 #include <algorithm>
 #include <assert.h>
+#include <map>
+#include <unordered_set>
+
 using namespace std;
+
+class DependencyGraph
+{
+  private:
+  public:
+    map<int, unordered_set<int>> graph;
+    DependencyGraph()
+    {
+        this->graph = map<int, unordered_set<int>>();
+    }
+
+    void insertEdge(int i, int j)
+    {
+        map<int, unordered_set<int>>::iterator it;
+        it = this->graph.find(j);
+        if (it != this->graph.end())
+        {
+            (it->second).insert(i);
+        }
+        else
+        {
+            unordered_set<int> dependencySet = unordered_set<int>();
+            dependencySet.insert(i);
+            this->graph.insert(pair<int, unordered_set<int>>(j, dependencySet));
+        }
+        return;
+    }
+
+    void traverseDG()
+    {
+        cout << "Dependency Graph:\n";
+        map<int, unordered_set<int>>::iterator it;
+        for (it = this->graph.begin(); it != this->graph.end(); it++)
+        {
+            // cout << it->first << "\n";
+            unordered_set<int>::iterator it2;
+
+            for (it2 = (it->second).begin(); it2 != (it->second).end(); it2++)
+            {
+                cout << it->first << "-->" << *it2 << "\n";
+            }
+            cout << "\n";
+        }
+    }
+};
 
 // code referred from http://www.cplusplus.com/forum/general/65804/
 int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
 {
     // Open the file:
-    // ifstream fin("../res/af_0_k101/af_0_k101.mtx");
-    ifstream fin("../res/unit_test/L.mtx");
+    ifstream fin("../res/af_0_k101/af_0_k101.mtx");
+    // ifstream fin("../res/unit_test/L.mtx");
 
     // Declare variables:
     int M, N, NNZ;
+
+    DependencyGraph dg = DependencyGraph();
 
     // Ignore headers and comments:
     while (fin.peek() == '%')
@@ -48,6 +98,7 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         int m, n;
         double data;
         fin >> m >> n >> data;
+        dg.insertEdge(m, n);
 
         // maintaining zero starting index
         m--;
@@ -66,17 +117,18 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
     Lp[N] = NNZ;  // only this should be required
     Li[NNZ] = -1; // JSICS
     Lx[NNZ] = -1; // JSICS
+    // dg.traverseDG();
 
     fin.close();
 
     return 0;
 }
 
-int readRHS(const int order, double* &B)
+int readRHS(const int order, double *&B)
 {
     // Open the file:
-    // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
-    ifstream fin("../res/unit_test/B.mtx");
+    ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
+    // ifstream fin("../res/unit_test/B.mtx");
 
     // Declare variables:
     int M, N;
@@ -133,7 +185,8 @@ int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
     //Lx[p] = the actual value itself
     for (j = 0; j < n; j++)
     {
-        if(x[j]){
+        if (x[j])
+        {
             x[j] /= Lx[Lp[j]];
             for (p = Lp[j] + 1; p < Lp[j + 1]; p++)
             {
@@ -144,12 +197,12 @@ int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
     return 0;
 }
 
-int print(int N, const double* x)
+int print(int N, const double *x)
 {
     cout << "Solving Lx+B gives: \n";
-    for(int i = 0; i < N; i++)
+    for (int i = 0; i < N; i++)
     {
-        cout << "x[" << i << "] = " << *(x+i) << "\n";
+        cout << "x[" << i << "] = " << *(x + i) << "\n";
     }
     return 0;
 }
@@ -162,10 +215,11 @@ int main()
     int *Li;
     double *Lx;
     // double *B;
-    cout << "Hello World!\n";
+    cout << "Hello World!\n\n";
 
     readMatrix(n, Lp, Li, Lx);
     readRHS(n, x);
+
     lsolve(n, Lp, Li, Lx, x);
     print(n, x);
     // readMatrix();
