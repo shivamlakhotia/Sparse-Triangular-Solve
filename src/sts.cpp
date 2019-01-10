@@ -133,13 +133,25 @@ int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
     //Lx[p] = the actual value itself
     for (j = 0; j < n; j++)
     {
-        x[j] /= Lx[Lp[j]];
-        for (p = Lp[j] + 1; p < Lp[j + 1]; p++)
-        {
-            x[Li[p]] -= Lx[p] * x[j];
+        if(x[j]){
+            x[j] /= Lx[Lp[j]];
+            for (p = Lp[j] + 1; p < Lp[j + 1]; p++)
+            {
+                x[Li[p]] -= Lx[p] * x[j];
+            }
         }
     }
-    return (1);
+    return 0;
+}
+
+int print(int N, const double* x)
+{
+    cout << "Solving Lx+B gives: \n";
+    for(int i = 0; i < N; i++)
+    {
+        cout << "x[" << i << "] = " << *(x+i) << "\n";
+    }
+    return 0;
 }
 
 int main()
@@ -155,6 +167,7 @@ int main()
     readMatrix(n, Lp, Li, Lx);
     readRHS(n, x);
     lsolve(n, Lp, Li, Lx, x);
+    print(n, x);
     // readMatrix();
     return 0;
 }
