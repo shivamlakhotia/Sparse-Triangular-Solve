@@ -62,10 +62,11 @@ class DependencyGraph
 
             for (it2 = (it->second).begin(); it2 != (it->second).end(); it2++)
             {
-                cout << it->first << "-->" << *it2 << "\n";
+                cout << it->first << "-->" << *it2 << " ";
             }
             cout << "\n";
         }
+        cout << "\n";
     }
 
     void findReachable(unordered_set<int> seed, unordered_set<int> &visited)
@@ -98,20 +99,29 @@ class DependencyGraph
                 }
             }
         }
+
+        cout << "Reachable set size: " << visited.size() << "\n";
+        unordered_set<int>::iterator it;
+        for (it = visited.begin(); it != visited.end(); it++)
+            cout << *it << " ";
+        cout << "\n\n";
     }
 };
 
 // code referred from http://www.cplusplus.com/forum/general/65804/
 int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
 {
+
+    cout << "Reading the LHS matrix from file.\n";
+
     // Open the file:
-    ifstream fin("../res/af_0_k101/af_0_k101.mtx");
-    // ifstream fin("../res/unit_test/L.mtx");
+    // ifstream fin("../res/af_0_k101/af_0_k101.mtx");
+    ifstream fin("../res/unit_test/L2.mtx");
 
     // Declare variables:
     int M, N, NNZ;
 
-    DependencyGraph dg = DependencyGraph();
+    // DependencyGraph dg = DependencyGraph();
 
     // Ignore headers and comments:
     while (fin.peek() == '%')
@@ -149,9 +159,9 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         fin >> m >> n >> data;
 
         // maintaining zero starting index
-        dg.insertEdge(m, n);
         m--;
         n--;
+        // dg.insertEdge(m, n);
 
         if (n != currCol)
         {
@@ -163,26 +173,27 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         Li[l] = m;    // row of the lth nz data point
     }
 
-    cout << "Dependency Graph Built\n";
+    // cout << "Dependency Graph Built\n";
 
     Lp[N] = NNZ;  // only this should be required
     Li[NNZ] = -1; // JSICS
     Lx[NNZ] = -1; // JSICS
     // dg.traverseDG();
 
-    unordered_set<int> seed;
-    seed.clear();
-    seed.insert(5);
-    unordered_set<int> reachable;
-    reachable.clear();
+    // unordered_set<int> seed;
+    // seed.clear();
+    // seed.insert(1);
+    // seed.insert(6);
+    // unordered_set<int> reachable;
+    // reachable.clear();
 
-    dg.findReachable(seed, reachable);
+    // dg.findReachable(seed, reachable);
 
-    cout << "Reachable set size: " << reachable.size() << "\n";
+    // cout << "Reachable set size: " << reachable.size() << "\n";
     // unordered_set<int>::iterator it;
-    // for(it = reachable.begin(); it != reachable.end(); it++)
-    //     cout << *it << " \n";
-
+    // for (it = reachable.begin(); it != reachable.end(); it++)
+    //     cout << *it << " ";
+    // cout << "\n\n";
     fin.close();
 
     return 0;
@@ -191,8 +202,8 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
 int readRHS(const int order, double *&B)
 {
     // Open the file:
-    ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
-    // ifstream fin("../res/unit_test/B.mtx");
+    // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
+    ifstream fin("../res/unit_test/B2.mtx");
 
     // Declare variables:
     int M, N;
@@ -223,17 +234,17 @@ int readRHS(const int order, double *&B)
     return 0;
 }
 
-/*
-* Lower triangular solver Lx=b
-* L is stored in the compressed column storage format
-* Inputs are:
-* n : the matrix dimension
-* Lp : the column pointer of L
-* Li : the row index of L
-* Lx : the values of L
-* In/Out:
-* x : the right hand-side b at start and the solution x at the end.
-*/
+/**
+ * Lower triangular solver Lx=b
+ * L is stored in the compressed column storage format
+ * Inputs are:
+ * n : the matrix dimension
+ * Lp : the column pointer of L
+ * Li : the row index of L
+ * Lx : the values of L
+ * In/Out:
+ * x : the right hand-side b at start and the solution x at the end.
+ */
 int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
 {
     //x is initilized with b
@@ -271,6 +282,47 @@ int print(int N, const double *x)
     return 0;
 }
 
+void buildDependencyGraph(int n, const int *Lp, const int *Li, DependencyGraph &dg)
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = Lp[i]; j < Lp[i + 1]; j++)
+        {
+            dg.insertEdge(Li[j], i);
+        }
+    }
+
+    dg.traverseDG();
+}
+
+void buildSeedSet(int order, const double *x, unordered_set<int> &seedSet)
+{
+    for (int i = 0; i < order; i++)
+    {
+        if (x[i])
+            seedSet.insert(i);
+    }
+
+    cout << "\nSize of Seed Set is: " << seedSet.size() << "\n";
+    cout << "Seed Set:\n";
+
+    for (unordered_set<int>::iterator it = seedSet.begin(); it != seedSet.end(); it++)
+        cout << *it << " ";
+    cout << "\n";
+
+    return;
+}
+
+void printExecutionTime(std::chrono::_V2::system_clock::time_point start, std::chrono::_V2::system_clock::time_point end, string msg)
+{
+    auto duration = duration_cast<microseconds>(end - start);
+
+    cout << "Time taken to " << msg << ": "
+         << duration.count() << " microseconds" << endl;
+    
+    return;
+}
+
 int main()
 {
     int n;
@@ -278,35 +330,41 @@ int main()
     int *Lp;
     int *Li;
     double *Lx;
+    unordered_set<int> seedSet;
+    unordered_set<int> reachSet;
+    seedSet.clear();
+    reachSet.clear();
+    DependencyGraph dg = DependencyGraph();
 
-    cout << "Hello World!\n\n";
-
-    // Get starting timepoint
-    auto start = high_resolution_clock::now();
+    // cout << "Hello World!\n\n";
 
     readMatrix(n, Lp, Li, Lx);
-
-    auto graphBuilt = high_resolution_clock::now();
-
     readRHS(n, x);
 
-    auto start2 = high_resolution_clock::now();
+    // Get starting timepoint
+    auto startTime = high_resolution_clock::now();
+
+    buildDependencyGraph(n, Lp, Li, dg);
+
+    auto graphBuiltTime = high_resolution_clock::now();
+
+    buildSeedSet(n, x, seedSet);
+
+    auto startTime2 = high_resolution_clock::now();
+
+    dg.findReachable(seedSet, reachSet);
+
+    auto reachSetTime = high_resolution_clock::now();
 
     lsolve(n, Lp, Li, Lx, x);
 
-    auto stop = high_resolution_clock::now();
+    auto stopTime = high_resolution_clock::now();
 
-    auto duration = duration_cast<microseconds>(graphBuilt - start);
+    printExecutionTime(startTime, graphBuiltTime, "build the graph");
+    printExecutionTime(startTime2, reachSetTime, "find reachability set");
+    printExecutionTime(reachSetTime, stopTime, "solve Lx = B");
 
-    cout << "Time taken to build the graph: "
-         << duration.count()/1000 << " milliseconds" << endl;
-
-    duration = duration_cast<microseconds>(stop - start2);
-
-    cout << "Time taken to solve LxB: "
-         << duration.count()/1000 << " milliseconds" << endl;
-
-    // print(n, x);
+    print(n, x);
     // readMatrix();
     return 0;
 }
