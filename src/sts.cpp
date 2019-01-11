@@ -20,6 +20,7 @@
 #include <vector>
 #include <queue>
 #include <chrono>
+#include <omp.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -101,9 +102,9 @@ class DependencyGraph
         }
 
         cout << "Reachable set size: " << visited.size() << "\n";
-        unordered_set<int>::iterator it;
-        for (it = visited.begin(); it != visited.end(); it++)
-            cout << *it << " ";
+        // unordered_set<int>::iterator it;
+        // for (it = visited.begin(); it != visited.end(); it++)
+        //     cout << *it << " ";
         cout << "\n\n";
     }
 };
@@ -115,8 +116,8 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
     cout << "Reading the LHS matrix from file.\n";
 
     // Open the file:
-    // ifstream fin("../res/af_0_k101/af_0_k101.mtx");
-    ifstream fin("../res/unit_test/L2.mtx");
+    ifstream fin("../res/af_0_k101/af_0_k101.mtx");
+    // ifstream fin("../res/unit_test/L2.mtx");
 
     // Declare variables:
     int M, N, NNZ;
@@ -203,7 +204,8 @@ int readRHS(const int order, double *&B)
 {
     // Open the file:
     // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
-    ifstream fin("../res/unit_test/B2.mtx");
+    // ifstream fin("../res/unit_test/B2.mtx");
+    ifstream fin("../res/af_0_k101/b_sparse_af_0_k101.mtx");
 
     // Declare variables:
     int M, N;
@@ -247,8 +249,10 @@ int readRHS(const int order, double *&B)
  */
 int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
 {
+    cout << "Without Optimization\n";
+
     //x is initilized with b
-    int p, j;
+    int p, j, count = 0;
     if (!Lp || !Li || !x)
         return (0);
     /* check inputs */
@@ -260,6 +264,41 @@ int lsolve(int n, int *Lp, int *Li, double *Lx, double *x)
     //Lx[p] = the actual value itself
     for (j = 0; j < n; j++)
     {
+        // count = 0;
+        if (x[j])
+        {
+            x[j] /= Lx[Lp[j]];
+            for (p = Lp[j] + 1; p < Lp[j + 1]; p++)
+            {
+                x[Li[p]] -= Lx[p] * x[j];
+            }
+        }
+    }
+    return 0;
+}
+
+int lsolve_optimized(int n, int *Lp, int *Li, double *Lx, double *x, vector<int> &reachSet)
+{
+    //x is initilized with b
+
+    cout << "With Optimization\n";
+    int p, j;
+    if (!Lp || !Li || !x)
+        return (0);
+    /* check inputs */
+
+    //j is column
+    //x[j] = b[j]
+    //Lp[j] + 1 = starting index of nz elements in jth column
+    //total number of nz elements in jth column is Lp[j+1] - Lp[j]
+    //Lx[p] = the actual value itself
+
+    int size = reachSet.size();
+
+    for (int i = 0; i < size; i++)
+    // for (vector<int>::iterator it = reachSet.begin(); it != reachSet.end(); it++)
+    {
+        j = reachSet[i];
         if (x[j])
         {
             x[j] /= Lx[Lp[j]];
@@ -284,6 +323,8 @@ int print(int N, const double *x)
 
 void buildDependencyGraph(int n, const int *Lp, const int *Li, DependencyGraph &dg)
 {
+// #pragma omp parallel
+// #pragma omp for
     for (int i = 0; i < n; i++)
     {
         for (int j = Lp[i]; j < Lp[i + 1]; j++)
@@ -292,7 +333,7 @@ void buildDependencyGraph(int n, const int *Lp, const int *Li, DependencyGraph &
         }
     }
 
-    dg.traverseDG();
+    // dg.traverseDG();
 }
 
 void buildSeedSet(int order, const double *x, unordered_set<int> &seedSet)
@@ -319,7 +360,7 @@ void printExecutionTime(std::chrono::_V2::system_clock::time_point start, std::c
 
     cout << "Time taken to " << msg << ": "
          << duration.count() << " microseconds" << endl;
-    
+
     return;
 }
 
@@ -354,9 +395,15 @@ int main()
 
     dg.findReachable(seedSet, reachSet);
 
+    vector<int> reachList(reachSet.begin(), reachSet.end());
+
+    sort(reachList.begin(), reachList.end());
+
     auto reachSetTime = high_resolution_clock::now();
 
-    lsolve(n, Lp, Li, Lx, x);
+    // lsolve(n, Lp, Li, Lx, x);
+
+    lsolve_optimized(n, Lp, Li, Lx, x, reachList);
 
     auto stopTime = high_resolution_clock::now();
 
