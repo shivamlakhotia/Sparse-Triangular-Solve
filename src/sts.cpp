@@ -1,3 +1,16 @@
+/**
+ * UoT, sts.cpp
+ * Purpose: Optimize Sparse Triangular Solve
+ * 
+ * @author Shivam Lakhotia
+ * @version 1.0 10/01/2019
+ * 
+ * References: 
+ * Execution-time logging: https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+ * Reading .mtx format: http://www.cplusplus.com/forum/general/65804/
+ * 
+ **/
+
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -6,8 +19,10 @@
 #include <unordered_set>
 #include <vector>
 #include <queue>
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 class DependencyGraph
 {
@@ -132,13 +147,11 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         int m, n;
         double data;
         fin >> m >> n >> data;
-        
+
         // maintaining zero starting index
         dg.insertEdge(m, n);
         m--;
         n--;
-        
-        
 
         if (n != currCol)
         {
@@ -150,7 +163,7 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         Li[l] = m;    // row of the lth nz data point
     }
 
-    cout << "Dependency Graph Built\n"; 
+    cout << "Dependency Graph Built\n";
 
     Lp[N] = NNZ;  // only this should be required
     Li[NNZ] = -1; // JSICS
@@ -165,7 +178,7 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
 
     dg.findReachable(seed, reachable);
 
-    cout << "Reachable set size: " << reachable.size() << "\n" ;
+    cout << "Reachable set size: " << reachable.size() << "\n";
     // unordered_set<int>::iterator it;
     // for(it = reachable.begin(); it != reachable.end(); it++)
     //     cout << *it << " \n";
@@ -265,13 +278,34 @@ int main()
     int *Lp;
     int *Li;
     double *Lx;
-    // double *B;
+
     cout << "Hello World!\n\n";
 
+    // Get starting timepoint
+    auto start = high_resolution_clock::now();
+
     readMatrix(n, Lp, Li, Lx);
+
+    auto graphBuilt = high_resolution_clock::now();
+
     readRHS(n, x);
 
-    // lsolve(n, Lp, Li, Lx, x);
+    auto start2 = high_resolution_clock::now();
+
+    lsolve(n, Lp, Li, Lx, x);
+
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<microseconds>(graphBuilt - start);
+
+    cout << "Time taken to build the graph: "
+         << duration.count()/1000 << " milliseconds" << endl;
+
+    duration = duration_cast<microseconds>(stop - start2);
+
+    cout << "Time taken to solve LxB: "
+         << duration.count()/1000 << " milliseconds" << endl;
+
     // print(n, x);
     // readMatrix();
     return 0;
