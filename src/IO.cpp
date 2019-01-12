@@ -1,23 +1,31 @@
 #include "IO.h"
 
-
-using namespace std;
-using namespace std::chrono;
-
 // code referred from http://www.cplusplus.com/forum/general/65804/
+/**
+ * Reading the Matrix from a file in Matrix Market format (.mtx)
+ * Storing the sparse matrix in Compressed Sparse Column (CSC) format.
+ * 
+ * Outputs are:
+ * order : the matrix dimension
+ * Lp : the column pointer of L
+ * Li : the row index of L
+ * Lx : the values of L
+ */
 int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
 {
-
-    cout << "Reading the LHS matrix from file.\n";
+    string fileName;
+    cout << "The Matrix file should be in coordinate format. Sparse Martix (L) File: (file should be in 'res/' directory) ";
+    cin >> fileName;
+    cout << "Reading the LHS matrix from: " << fileName << "\n";
 
     // Open the file:
-    ifstream fin("../res/af_0_k101/af_0_k101.mtx");
+    // ifstream fin("../res/af_0_k101/af_0_k101.mtx");
+    ifstream fin("../res/" + fileName);
+
     // ifstream fin("../res/unit_test/L2.mtx");
 
     // Declare variables:
     int M, N, NNZ;
-
-    // DependencyGraph dg = DependencyGraph();
 
     // Ignore headers and comments:
     while (fin.peek() == '%')
@@ -31,7 +39,7 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
     Li = new int[NNZ + 1];    // row index
     Lx = new double[NNZ + 1]; // non zero
 
-    // initilize all the values with zero (will increase latency)
+    // initilize all the values with zero (will increase exec time)
     // fill(Lp, Lp + M, 0);
     // fill(Li, Li + NNZ, 0);
     // fill(Lx, Lx + NNZ, 0.);
@@ -40,9 +48,9 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
     // Memory footprint of this program should be around 100 MB.
     // Size of Lx should be around 70 MB.
     // Size of Lp and Li should be around 2 MB each.
-    // Verify this using resourse monitor.
+    // Verify this using resourse monitor. Verified.
 
-    // initilize the starting points.
+    // initialize the starting points.
     int currCol = -1;
     // Lp[0] = 0;
 
@@ -57,7 +65,6 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         // maintaining zero starting index
         m--;
         n--;
-        // dg.insertEdge(m, n);
 
         if (n != currCol)
         {
@@ -69,38 +76,81 @@ int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx)
         Li[l] = m;    // row of the lth nz data point
     }
 
-    // cout << "Dependency Graph Built\n";
-
     Lp[N] = NNZ;  // only this should be required
     Li[NNZ] = -1; // JSICS
     Lx[NNZ] = -1; // JSICS
-    // dg.traverseDG();
 
-    // unordered_set<int> seed;
-    // seed.clear();
-    // seed.insert(1);
-    // seed.insert(6);
-    // unordered_set<int> reachable;
-    // reachable.clear();
-
-    // dg.findReachable(seed, reachable);
-
-    // cout << "Reachable set size: " << reachable.size() << "\n";
-    // unordered_set<int>::iterator it;
-    // for (it = reachable.begin(); it != reachable.end(); it++)
-    //     cout << *it << " ";
-    // cout << "\n\n";
     fin.close();
 
     return 0;
 }
 
+/**
+ * As the name suggests, this method reads the RHS array B.
+ * This method first finds out the format of the matrix
+ * and calls the respective function to read the RHS.
+ * Supports two formats right now: Array and Coordinate
+ */
 int readRHS(const int order, double *&B)
 {
-    // Open the file:
-    // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
-    // ifstream fin("../res/unit_test/B2.mtx");
-    ifstream fin("../res/af_0_k101/b_sparse_af_0_k101.mtx");
+    string fileName;
+    enum Format
+    {
+        Coordinate,
+        Array,
+        Undefined
+    };
+
+    enum Format format = Undefined;
+    string line;
+
+    cout << "RHS (B) File: (file should be in 'res/' directory) ";
+
+    cin >> fileName;
+
+    ifstream fin("../res/" + fileName);
+
+    while (true)
+    {
+        getline(fin, line);
+        if (line.find("%%MatrixMarket") != string::npos)
+        {
+            if (line.find("coordinate")!= string::npos)
+                format = Coordinate;
+            else if (line.find("array")!= string::npos)
+                format = Array;
+            else
+                cout << "\nError: Unhandled format\n";
+            break;
+        }
+    }
+
+    fin.close();
+
+    assert(format != Undefined);
+
+    if (format == Coordinate)
+        readRHS_coordinate(order, B, fileName);
+    else if (format == Array)
+        readRHS_array(order, B, fileName);
+    else
+        cout << "Should never be here!";
+
+    return 0;
+}
+
+/**
+ * Utility function: reads the RHS present in array format
+ */
+int readRHS_array(const int order, double *&B, string fileName)
+{
+    cout << "Reading the RHS column from: " << fileName << "\n";
+
+    // // Open the file:
+    // // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
+    // // ifstream fin("../res/unit_test/B2.mtx");
+    // // ifstream fin("../res/af_0_k101/b_dense_af_0_k101.mtx");
+    ifstream fin("../res/" + fileName);
 
     // Declare variables:
     int M, N;
@@ -130,7 +180,62 @@ int readRHS(const int order, double *&B)
 
     return 0;
 }
-int print(int N, const double *x)
+
+
+/**
+ * Utility function: reads the RHS present in coordinate format
+ */
+int readRHS_coordinate(const int order, double *&B, string fileName)
+{
+    cout << "Reading the RHS column from: " << fileName << "\n";
+
+    // Open the file:
+    // ifstream fin("../res/af_0_k101/af_0_k101_b.mtx");
+    // ifstream fin("../res/unit_test/B2.mtx");
+    // ifstream fin("../res/af_0_k101/b_sparse_af_0_k101.mtx");
+    // ifstream fin("../res/af_0_k101/b_dense_af_0_k101.mtx");
+
+    ifstream fin("../res/" + fileName);
+
+    // Declare variables:
+    int M, N, NNZ;
+
+    // Ignore headers and comments:
+    while (fin.peek() == '%')
+        fin.ignore(2048, '\n');
+
+    // Read defining parameters:
+    fin >> M >> N >> NNZ;
+
+    assert(order == M);
+
+    B = new double[M + 2];
+
+    memset(B, 0., sizeof(B));
+
+    // Read the data and create the matrix in CSC format
+    for (int l = 0; l < NNZ; l++)
+    {
+        // getting data
+        int m, n;
+        double data;
+        fin >> m >> n >> data;
+        m--;
+        n--;
+        // fin >> B[l];
+        B[m] = data;
+    }
+    B[M] = -1; // JSICS
+
+    fin.close();
+
+    return 0;
+}
+
+/**
+ * Prints the solution x of Lx=B
+ */
+int printSolution(int N, const double *x)
 {
     cout << "Solving Lx+B gives: \n";
     for (int i = 0; i < N; i++)
@@ -140,6 +245,9 @@ int print(int N, const double *x)
     return 0;
 }
 
+/**
+ * Prints the execution time provided the starting and ending tie
+ */ 
 void printExecutionTime(std::chrono::_V2::system_clock::time_point start, std::chrono::_V2::system_clock::time_point end, string msg)
 {
     auto duration = duration_cast<microseconds>(end - start);

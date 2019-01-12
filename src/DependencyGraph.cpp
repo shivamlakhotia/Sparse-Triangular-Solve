@@ -1,10 +1,18 @@
 #include "DependencyGraph.h"
 
+/**
+ * Ctor of DependencyGraph class.
+ * Initializes the data member graph
+ */ 
 DependencyGraph::DependencyGraph()
 {
     this->graph = map<int, unordered_set<int>>();
 }
 
+
+/**
+ * Adds an egde in the Dependency Graph from j to i
+ */
 void DependencyGraph::insertEdge(int i, int j)
 {
     map<int, unordered_set<int>>::iterator it;
@@ -22,6 +30,9 @@ void DependencyGraph::insertEdge(int i, int j)
     return;
 }
 
+/** 
+ * Utility method: Prints the dependency graph
+ */ 
 void DependencyGraph::traverseDG()
 {
     cout << "Dependency Graph:\n";
@@ -40,6 +51,11 @@ void DependencyGraph::traverseDG()
     cout << "\n";
 }
 
+/**
+ * Provided a seed set em{seed}, finds out the reachability set in graph
+ * IN: SeedSet: seed
+ * OUT: ReachSet: visited
+ */
 void DependencyGraph::findReachable(unordered_set<int> seed, unordered_set<int> &visited)
 {
     cout << "Finding reachability set now\n";

@@ -12,6 +12,7 @@
 #include <chrono>
 #include <omp.h>
 #include "DependencyGraph.h"
+#include <string.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -19,7 +20,9 @@ using namespace std::chrono;
 // code referred from http://www.cplusplus.com/forum/general/65804/
 int readMatrix(int &order, int *&Lp, int *&Li, double *&Lx);
 int readRHS(const int order, double *&B);
-int print(int N, const double *x);
+int readRHS_coordinate(const int order, double *&B, string fin);
+int readRHS_array(const int order, double *&B, string fin);
+int printSolution(int N, const double *x);
 void printExecutionTime(std::chrono::_V2::system_clock::time_point start, std::chrono::_V2::system_clock::time_point end, string msg);
 
 #endif
